@@ -1,0 +1,49 @@
+name: Cache metadata validation
+run-name: Cache metadata - ${{ inputs.revision }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Commit or branch to validate
+        required: true
+        default: fix/cached-response-metadata
+        type: string
+      full_build:
+        description: Run module build, JS tests and formatting checks
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  cache-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.revision }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: corretto
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Run cache model JVM tests
+        run: ./gradlew :prompt:prompt-cache:prompt-cache-model:jvmTest --no-daemon --stacktrace
+      - name: Build affected module and check formatting
+        if: ${{ inputs.full_build }}
+        run: ./gradlew :prompt:prompt-cache:prompt-cache-model:jsTest :prompt:prompt-cache:prompt-cache-model:build :prompt:prompt-cache:prompt-cache-model:ktlintCheck --no-daemon --stacktrace
+      - name: Summarize JVM test results
+        if: always()
+        run: grep -h "<testsuite " prompt/prompt-cache/prompt-cache-model/build/test-results/jvmTest/TEST-*.xml
+      - name: Preserve reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cache-metadata-reports
+          path: |
+            prompt/prompt-cache/prompt-cache-model/build/reports/
+            prompt/prompt-cache/prompt-cache-model/build/test-results/
