@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   cache-metadata:
-    name: 4{{ matrix.case }}
+    name: ${{ matrix.case }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: 4{{ matrix.revision }}
+          ref: ${{ matrix.revision }}
       - uses: actions/setup-java@v5
         with:
           distribution: corretto
@@ -35,7 +35,7 @@ jobs:
       - name: Run cache model JVM tests
         run: ./gradlew :prompt:prompt-cache:prompt-cache-model:jvmTest --no-daemon --stacktrace
       - name: Build affected module and check formatting
-        if: 4{{ matrix.case == 'fixed' }}
+        if: ${{ matrix.case == 'fixed' }}
         run: ./gradlew :prompt:prompt-cache:prompt-cache-model:jsTest :prompt:prompt-cache:prompt-cache-model:build :prompt:prompt-cache:prompt-cache-model:ktlintCheck --no-daemon --stacktrace
       - name: Summarize JVM test results
         if: always()
@@ -44,7 +44,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: cache-metadata-reports-4{{ matrix.case }}
+          name: cache-metadata-reports-${{ matrix.case }}
           path: |
             prompt/prompt-cache/prompt-cache-model/build/reports/
             prompt/prompt-cache/prompt-cache-model/build/test-results/
