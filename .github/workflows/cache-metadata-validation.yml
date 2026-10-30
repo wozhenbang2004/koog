@@ -1,31 +1,32 @@
 name: Cache metadata validation
-run-name: Cache metadata - ${{ inputs.revision }}
+run-name: Cache metadata regression and fixed build
 
 on:
+  push:
+    branches: [validation/cache-metadata]
+    paths: [.github/workflows/cache-metadata-validation.yml]
   workflow_dispatch:
-    inputs:
-      revision:
-        description: Commit or branch to validate
-        required: true
-        default: fix/cached-response-metadata
-        type: string
-      full_build:
-        description: Run module build, JS tests and formatting checks
-        required: true
-        default: true
-        type: boolean
 
 permissions:
   contents: read
 
 jobs:
   cache-metadata:
+    name: 4{{ matrix.case }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: baseline
+            revision: e728313bdc9ba488d593b032ca664f017e1db963
+          - case: fixed
+            revision: 25346d31f4c35f6a48edda4bbc8fc788eb9cf265
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.revision }}
+          ref: 4{{ matrix.revision }}
       - uses: actions/setup-java@v5
         with:
           distribution: corretto
@@ -34,7 +35,7 @@ jobs:
       - name: Run cache model JVM tests
         run: ./gradlew :prompt:prompt-cache:prompt-cache-model:jvmTest --no-daemon --stacktrace
       - name: Build affected module and check formatting
-        if: ${{ inputs.full_build }}
+        if: 4{{ matrix.case == 'fixed' }}
         run: ./gradlew :prompt:prompt-cache:prompt-cache-model:jsTest :prompt:prompt-cache:prompt-cache-model:build :prompt:prompt-cache:prompt-cache-model:ktlintCheck --no-daemon --stacktrace
       - name: Summarize JVM test results
         if: always()
@@ -43,7 +44,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: cache-metadata-reports
+          name: cache-metadata-reports-4{{ matrix.case }}
           path: |
             prompt/prompt-cache/prompt-cache-model/build/reports/
             prompt/prompt-cache/prompt-cache-model/build/test-results/
